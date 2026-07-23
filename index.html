@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>A little game for you…</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Infant:wght@400;500;600;700&family=Great+Vibes&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   ✦  EDIT THIS BLOCK — everything personal lives in CONFIG (in the
+      <script> at the bottom of the file). No coding needed.
+   ============================================================ */
+
+:root{
+  --pink:#EC4899;
+  --pink-deep:#DB2777;
+  --purple:#8B5CF6;
+  --gold:#F59E0B;
+  --bg:#FDF2F8;
+  --bg2:#FCE7F3;
+  --ink:#3B1B2E;
+  --ink-soft:#7A4A63;
+  --card:#FFFFFF;
+  --border:#FBD7E8;
+  --ring:#EC4899;
+  --radius:26px;
+  /* claymorphism double shadow */
+  --clay: 10px 10px 24px rgba(190,60,120,.22),
+          -8px -8px 20px rgba(255,255,255,.85),
+          inset 2px 2px 6px rgba(255,255,255,.7),
+          inset -3px -3px 8px rgba(190,60,120,.10);
+  --clay-press: inset 6px 6px 14px rgba(190,60,120,.20),
+                inset -5px -5px 12px rgba(255,255,255,.8);
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  min-height:100dvh;
+  font-family:'Cormorant Infant',Georgia,serif;
+  color:var(--ink);
+  background:
+    radial-gradient(1200px 600px at 15% -10%, #FFE4F1 0%, transparent 60%),
+    radial-gradient(900px 500px at 110% 10%, #EDE4FF 0%, transparent 55%),
+    linear-gradient(160deg,var(--bg) 0%, var(--bg2) 100%);
+  background-attachment:fixed;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* floating hearts backdrop */
+#hearts{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+.float-heart{position:absolute;bottom:-40px;opacity:.5;animation:rise linear infinite}
+@keyframes rise{
+  0%{transform:translateY(0) rotate(0);opacity:0}
+  10%{opacity:.55}
+  100%{transform:translateY(-115dvh) rotate(40deg);opacity:0}
+}
+
+/* layout */
+.wrap{position:relative;z-index:2;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:28px 18px;}
+.stage{width:100%;max-width:560px;display:none;animation:pop .5s cubic-bezier(.2,.9,.3,1.2) both}
+.stage.active{display:block}
+@keyframes pop{from{opacity:0;transform:translateY(18px) scale(.96)}to{opacity:1;transform:none}}
+
+.card{
+  background:var(--card);
+  border-radius:var(--radius);
+  box-shadow:var(--clay);
+  padding:34px 28px 30px;
+  text-align:center;
+  border:3px solid rgba(255,255,255,.6);
+}
+
+/* progress hearts */
+.progress{display:flex;gap:10px;justify-content:center;margin-bottom:18px}
+.progress .p{width:22px;height:22px;color:#F6C9DD;transition:transform .3s, color .3s}
+.progress .p.on{color:var(--pink);transform:scale(1.18)}
+
+.kicker{font-family:'Great Vibes',cursive;color:var(--pink-deep);font-size:clamp(30px,7vw,44px);line-height:1;margin:2px 0 6px}
+h1{font-family:'Cormorant Infant',serif;font-weight:700;font-size:clamp(24px,6vw,34px);margin:6px 0 4px;letter-spacing:.2px}
+.lead{font-size:clamp(17px,4.4vw,20px);color:var(--ink-soft);line-height:1.55;margin:10px auto 0;max-width:42ch}
+.tiny{font-size:14px;color:var(--ink-soft)}
+.label{font-family:'Nunito',sans-serif;font-weight:800;letter-spacing:.14em;text-transform:uppercase;font-size:12px;color:var(--purple);opacity:.9}
+
+/* buttons — clay */
+.btn{
+  font-family:'Nunito',sans-serif;font-weight:800;font-size:17px;
+  color:#fff;background:linear-gradient(180deg,#F472B6,var(--pink));
+  border:none;border-radius:18px;padding:15px 26px;cursor:pointer;
+  box-shadow:6px 6px 16px rgba(190,60,120,.3), -4px -4px 12px rgba(255,255,255,.7), inset 0 1px 0 rgba(255,255,255,.5);
+  transition:transform .18s ease, box-shadow .18s ease, filter .18s;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+  min-height:48px;
+}
+.btn:hover{transform:translateY(-2px);filter:brightness(1.03)}
+.btn:active{transform:translateY(1px);box-shadow:var(--clay-press)}
+.btn:focus-visible{outline:3px solid var(--ring);outline-offset:3px}
+.btn.gold{background:linear-gradient(180deg,#FBBF24,var(--gold));box-shadow:6px 6px 16px rgba(180,120,10,.3), -4px -4px 12px rgba(255,255,255,.7)}
+.btn.ghost{background:#fff;color:var(--pink-deep);box-shadow:var(--clay)}
+.btn.big{font-size:20px;padding:18px 40px}
+
+.skip{display:inline-block;margin-top:18px;font-family:'Nunito',sans-serif;font-weight:700;font-size:13px;color:#C98DA9;text-decoration:none;border-bottom:1px dashed #E6B8CE;cursor:pointer;background:none;border-top:none;border-left:none;border-right:none}
+.skip:hover{color:var(--pink-deep)}
+
+/* choice grid (riddle) */
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:22px}
+.choice{
+  font-family:'Nunito',sans-serif;font-weight:700;font-size:16px;color:var(--ink);
+  background:#fff;border:none;border-radius:18px;padding:18px 14px;cursor:pointer;
+  box-shadow:var(--clay);transition:transform .15s, box-shadow .15s;min-height:60px;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+}
+.choice:hover{transform:translateY(-3px)}
+.choice:active{transform:translateY(0);box-shadow:var(--clay-press)}
+.choice:focus-visible{outline:3px solid var(--ring);outline-offset:3px}
+.choice.wrong{animation:shake .4s;box-shadow:inset 4px 4px 10px rgba(220,40,40,.18), inset -4px -4px 10px rgba(255,255,255,.7);color:#C0392B}
+.choice.right{background:linear-gradient(180deg,#FCE7A0,#FBBF24);color:#5A3B00}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+
+/* unscramble */
+.slots{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:24px 0 8px;min-height:64px}
+.slot{width:52px;height:60px;border-radius:14px;background:#FFF;box-shadow:var(--clay-press);
+  display:flex;align-items:center;justify-content:center;font-family:'Nunito',sans-serif;font-weight:800;font-size:26px;color:var(--pink-deep);cursor:pointer}
+.slot.filled{background:linear-gradient(180deg,#FBCFE8,#F9A8D4);box-shadow:var(--clay);color:#7A1D4B}
+.tiles{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.tile{width:52px;height:60px;border-radius:14px;border:none;background:linear-gradient(180deg,#fff,#FFF0F7);
+  box-shadow:var(--clay);font-family:'Nunito',sans-serif;font-weight:800;font-size:26px;color:var(--pink-deep);cursor:pointer;transition:transform .15s, opacity .2s}
+.tile:hover{transform:translateY(-3px)}
+.tile:active{transform:translateY(0);box-shadow:var(--clay-press)}
+.tile:focus-visible{outline:3px solid var(--ring);outline-offset:3px}
+.tile.used{opacity:.25;pointer-events:none;transform:scale(.9)}
+
+/* memory match */
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
+.mcard{aspect-ratio:3/4;border-radius:18px;border:none;cursor:pointer;position:relative;background:transparent;perspective:600px;padding:0;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.mcard .inner{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .45s cubic-bezier(.2,.9,.3,1.1)}
+.mcard.flipped .inner,.mcard.matched .inner{transform:rotateY(180deg)}
+.mface{position:absolute;inset:0;border-radius:18px;display:flex;align-items:center;justify-content:center;backface-visibility:hidden}
+.mfront{background:linear-gradient(160deg,#F9A8D4,#C084FC);box-shadow:var(--clay)}
+.mfront svg{width:34%;color:#fff;opacity:.9}
+.mback{background:#fff;box-shadow:var(--clay);transform:rotateY(180deg)}
+.mback svg{width:52%}
+.mcard.matched{animation:matchPulse .5s}
+.mcard.matched .mback{background:linear-gradient(160deg,#FEF3C7,#FDE68A)}
+@keyframes matchPulse{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
+.mcard:focus-visible{outline:3px solid var(--ring);outline-offset:3px;border-radius:18px}
+
+/* finale */
+.finale-q{font-family:'Great Vibes',cursive;color:var(--pink-deep);font-size:clamp(38px,10vw,60px);line-height:1.05;margin:6px 0 4px}
+.answers{position:relative;display:flex;gap:16px;justify-content:center;align-items:center;margin-top:26px;min-height:70px;flex-wrap:wrap}
+#noBtn{transition:transform .25s cubic-bezier(.2,.9,.3,1.3)}
+#yesBtn{transition:transform .2s}
+
+/* details card */
+.detail-row{display:flex;align-items:flex-start;gap:14px;text-align:left;padding:14px 4px;border-bottom:1px dashed var(--border)}
+.detail-row:last-child{border-bottom:none}
+.detail-ico{flex:0 0 auto;width:40px;height:40px;border-radius:12px;background:linear-gradient(160deg,#FBCFE8,#F9A8D4);display:flex;align-items:center;justify-content:center;box-shadow:var(--clay)}
+.detail-ico svg{width:22px;color:#fff}
+.detail-row .k{font-family:'Nunito',sans-serif;font-weight:800;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--purple)}
+.detail-row .v{font-size:19px;color:var(--ink);line-height:1.3}
+
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:50}
+
+/* heart svg helper */
+.hi{display:inline-block;vertical-align:middle}
+
+@media (max-width:400px){
+  .card{padding:26px 18px}
+  .slot,.tile{width:44px;height:52px;font-size:22px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms !important;transition-duration:.05ms !important}
+  .float-heart{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="hearts" aria-hidden="true"></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<div class="wrap">
+
+  <!-- progress hearts (shared) -->
+  <!-- Each stage renders inside .stage; progress bar injected at top of puzzle stages -->
+
+  <!-- INTRO -->
+  <section class="stage active" id="s-intro" aria-label="Welcome">
+    <div class="card">
+      <div class="kicker" id="greeting">Hi you…</div>
+      <h1>I made you a little game 🤍</h1>
+      <p class="lead" id="introText">Solve three tiny puzzles and you'll unlock a question I've been wanting to ask you. Ready?</p>
+      <div style="margin-top:26px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn big" onclick="go('s-l1')" id="startBtn">Let's play</button>
+      </div>
+      <button class="skip" onclick="go('s-finale')">skip straight to the question →</button>
+    </div>
+  </section>
+
+  <!-- LEVEL 1 — riddle -->
+  <section class="stage" id="s-l1" aria-label="Puzzle 1">
+    <div class="card">
+      <div class="progress" data-step="0"></div>
+      <div class="label">Puzzle 1 of 3</div>
+      <h1 id="riddleQ">Riddle</h1>
+      <p class="lead" id="riddleHint"></p>
+      <div class="choices" id="riddleChoices"></div>
+      <button class="skip" onclick="go('s-l2')">skip this one →</button>
+    </div>
+  </section>
+
+  <!-- LEVEL 2 — unscramble -->
+  <section class="stage" id="s-l2" aria-label="Puzzle 2">
+    <div class="card">
+      <div class="progress" data-step="1"></div>
+      <div class="label">Puzzle 2 of 3</div>
+      <h1>Unscramble the secret word</h1>
+      <p class="lead" id="scrambleHint"></p>
+      <div class="slots" id="slots" aria-label="answer slots"></div>
+      <div class="tiles" id="tiles"></div>
+      <div style="margin-top:12px"><button class="btn ghost" style="font-size:14px;padding:10px 18px;min-height:auto" onclick="resetScramble()">clear</button></div>
+      <button class="skip" onclick="go('s-l3')">skip this one →</button>
+    </div>
+  </section>
+
+  <!-- LEVEL 3 — memory match -->
+  <section class="stage" id="s-l3" aria-label="Puzzle 3">
+    <div class="card">
+      <div class="progress" data-step="2"></div>
+      <div class="label">Puzzle 3 of 3</div>
+      <h1>Match the pairs</h1>
+      <p class="lead">Find all three matching pairs to unlock the last door.</p>
+      <div class="grid" id="memGrid"></div>
+      <button class="skip" onclick="go('s-finale')">skip this one →</button>
+    </div>
+  </section>
+
+  <!-- FINALE — the question -->
+  <section class="stage" id="s-finale" aria-label="The question">
+    <div class="card">
+      <div class="kicker">You solved it 🤍</div>
+      <div class="finale-q" id="finaleQ">Will you go on a date with me?</div>
+      <p class="lead" id="finaleSub">No pressure… but the "yes" button is right there and it's very easy to click.</p>
+      <div class="answers">
+        <button class="btn big gold" id="yesBtn" onclick="saidYes()">Yes 🤍</button>
+        <button class="btn big ghost" id="noBtn">No</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- YES — celebration + details -->
+  <section class="stage" id="s-yes" aria-label="Yes">
+    <div class="card">
+      <div class="kicker" style="font-size:clamp(40px,11vw,64px)">Yes! 🎉</div>
+      <h1 id="yesTitle">You just made my whole week.</h1>
+      <p class="lead" id="yesText">Here's what I'm thinking — but we can change anything you like.</p>
+      <div id="detailsBox" style="margin-top:20px"></div>
+      <p class="lead" id="signoff" style="margin-top:22px"></p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ============================================================
+   ✦✦✦  PERSONALIZE HERE — this is the only part you need to edit  ✦✦✦
+   ============================================================ */
+const CONFIG = {
+  herName: "Jovie",            // Jovie Jean 🤍
+  yourName: "Tishaun",         // used in the sign-off — change if this isn't you
+
+  // Puzzle 1 — a sweet riddle. Put the correct answer in `answer`.
+  riddle: {
+    question: "What has a heartbeat because of a girl named Jovie?",
+    hint: "Pick the sappy one. 😉",
+    options: ["My step counter", "My phone battery", "Me", "The stock market"],
+    answer: "Me"
+  },
+
+  // Puzzle 2 — a short secret word the player unscrambles (4–7 letters is best).
+  secretWord: "JOVIE",
+  scrambleHint: "Tap the letters in order. Five letters. Hint: it's my favorite name in the world. 😊",
+
+  // The big question
+  finalQuestion: "Jovie, will you go on a date with me?",
+
+  // Shown after she clicks YES. Edit freely; leave a field "" to hide that row.
+  date: {
+    when:  "This Saturday, 7:00pm",
+    where: "That little place with the good pasta",
+    dress: "Come as you are (you always look great)",
+    note:  "I'll pick you up — just say the word."
+  },
+  signoff: "Can't wait. — " // yourName gets appended automatically
+};
+
+/* ============================================================
+   ✦  Engine below — no need to edit unless you want to.
+   ============================================================ */
+
+// ---- greeting ----
+document.getElementById('greeting').textContent =
+  CONFIG.herName ? `Hi ${CONFIG.herName}…` : "Hi you…";
+
+// ---- stage navigation ----
+let current = 's-intro';
+function go(id){
+  const from = document.getElementById(current);
+  const to = document.getElementById(id);
+  if(!to) return;
+  from.classList.remove('active');
+  to.classList.add('active');
+  current = id;
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(id==='s-l2') buildScramble();
+  if(id==='s-l3') buildMemory();
+}
+
+// ---- progress hearts ----
+const HEART='<svg class="hi" viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true"><path d="M12 21s-7.5-4.9-10.2-9.2C-0.2 8 1.6 4 5.2 4c2 0 3.4 1.2 4.3 2.5C10.4 5.2 11.8 4 13.8 4c3.6 0 5.4 4 3.4 7.8C19.5 16.1 12 21 12 21z"/></svg>';
+let solved=[false,false,false];
+document.querySelectorAll('.progress').forEach(p=>{
+  p.innerHTML = [0,1,2].map(i=>`<span class="p" data-i="${i}">${HEART}</span>`).join('');
+});
+function refreshProgress(){
+  document.querySelectorAll('.progress').forEach(p=>{
+    p.querySelectorAll('.p').forEach(el=>{
+      el.classList.toggle('on', solved[+el.dataset.i]);
+    });
+  });
+}
+function markSolved(i){ solved[i]=true; refreshProgress(); }
+
+// ---- Puzzle 1: riddle ----
+(function initRiddle(){
+  document.getElementById('riddleQ').textContent = CONFIG.riddle.question;
+  document.getElementById('riddleHint').textContent = CONFIG.riddle.hint || '';
+  const box = document.getElementById('riddleChoices');
+  CONFIG.riddle.options.forEach(opt=>{
+    const b=document.createElement('button');
+    b.className='choice'; b.type='button'; b.textContent=opt;
+    b.onclick=()=>{
+      if(opt===CONFIG.riddle.answer){
+        b.classList.add('right'); burst(b);
+        markSolved(0);
+        setTimeout(()=>go('s-l2'),650);
+      }else{
+        b.classList.remove('wrong'); void b.offsetWidth; b.classList.add('wrong');
+      }
+    };
+    box.appendChild(b);
+  });
+})();
+
+// ---- Puzzle 2: unscramble ----
+let scrambleState=[];
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function buildScramble(){
+  document.getElementById('scrambleHint').textContent = CONFIG.scrambleHint||'';
+  const word = CONFIG.secretWord.toUpperCase().replace(/\s/g,'');
+  const slots=document.getElementById('slots'); const tiles=document.getElementById('tiles');
+  slots.innerHTML=''; tiles.innerHTML=''; scrambleState=[];
+  for(let i=0;i<word.length;i++){
+    const s=document.createElement('div'); s.className='slot'; s.dataset.i=i; s.textContent='';
+    s.onclick=()=>removeLast();
+    slots.appendChild(s);
+  }
+  let letters=word.split('');
+  do{shuffle(letters);}while(letters.join('')===word && word.length>1);
+  letters.forEach((ch,idx)=>{
+    const t=document.createElement('button'); t.className='tile'; t.type='button'; t.textContent=ch; t.dataset.k=idx;
+    t.onclick=()=>placeLetter(ch,t);
+    tiles.appendChild(t);
+  });
+}
+function placeLetter(ch,tileEl){
+  const word=CONFIG.secretWord.toUpperCase().replace(/\s/g,'');
+  if(scrambleState.length>=word.length) return;
+  const idx=scrambleState.length;
+  const slot=document.querySelector(`#slots .slot[data-i="${idx}"]`);
+  slot.textContent=ch; slot.classList.add('filled');
+  tileEl.classList.add('used');
+  scrambleState.push({ch,tileEl});
+  if(scrambleState.length===word.length) checkScramble();
+}
+function removeLast(){
+  const last=scrambleState.pop(); if(!last) return;
+  last.tileEl.classList.remove('used');
+  const slot=document.querySelector(`#slots .slot[data-i="${scrambleState.length}"]`);
+  slot.textContent=''; slot.classList.remove('filled');
+}
+function resetScramble(){ while(scrambleState.length) removeLast(); }
+function checkScramble(){
+  const word=CONFIG.secretWord.toUpperCase().replace(/\s/g,'');
+  const guess=scrambleState.map(s=>s.ch).join('');
+  if(guess===word){
+    document.querySelectorAll('#slots .slot').forEach((s,i)=>setTimeout(()=>burst(s),i*70));
+    markSolved(1);
+    setTimeout(()=>go('s-l3'),820);
+  }else{
+    document.getElementById('slots').style.animation='shake .4s';
+    setTimeout(()=>{document.getElementById('slots').style.animation='';resetScramble();},420);
+  }
+}
+
+// ---- Puzzle 3: memory match ----
+const ICONS={
+  heart:'<svg viewBox="0 0 24 24" fill="#EC4899"><path d="M12 21s-7.5-4.9-10.2-9.2C-0.2 8 1.6 4 5.2 4c2 0 3.4 1.2 4.3 2.5C10.4 5.2 11.8 4 13.8 4c3.6 0 5.4 4 3.4 7.8C19.5 16.1 12 21 12 21z"/></svg>',
+  star:'<svg viewBox="0 0 24 24" fill="#F59E0B"><path d="M12 2l2.9 6.3 6.9.7-5.1 4.6 1.4 6.8L12 17.8 5.9 20.4l1.4-6.8L2.2 9l6.9-.7z"/></svg>',
+  moon:'<svg viewBox="0 0 24 24" fill="#8B5CF6"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>'
+};
+let mem={first:null,lock:false,pairs:0};
+function buildMemory(){
+  const grid=document.getElementById('memGrid'); grid.innerHTML='';
+  mem={first:null,lock:false,pairs:0};
+  let deck=shuffle(['heart','heart','star','star','moon','moon']);
+  deck.forEach((key,i)=>{
+    const c=document.createElement('button'); c.className='mcard'; c.type='button'; c.dataset.key=key;
+    c.setAttribute('aria-label','hidden card');
+    c.innerHTML=`<div class="inner">
+        <div class="mface mfront"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-7.5-4.9-10.2-9.2C-0.2 8 1.6 4 5.2 4c2 0 3.4 1.2 4.3 2.5C10.4 5.2 11.8 4 13.8 4c3.6 0 5.4 4 3.4 7.8C19.5 16.1 12 21 12 21z"/></svg></div>
+        <div class="mface mback">${ICONS[key]}</div>
+      </div>`;
+    c.onclick=()=>flip(c);
+    grid.appendChild(c);
+  });
+}
+function flip(c){
+  if(mem.lock||c.classList.contains('flipped')||c.classList.contains('matched')) return;
+  c.classList.add('flipped');
+  if(!mem.first){mem.first=c;return;}
+  if(mem.first.dataset.key===c.dataset.key){
+    c.classList.add('matched'); mem.first.classList.add('matched');
+    burst(c);
+    mem.first=null; mem.pairs++;
+    if(mem.pairs===3){ markSolved(2); setTimeout(()=>go('s-finale'),700); }
+  }else{
+    mem.lock=true; const a=mem.first,b=c;
+    setTimeout(()=>{a.classList.remove('flipped');b.classList.remove('flipped');mem.first=null;mem.lock=false;},700);
+  }
+}
+
+// ---- FINALE ----
+document.getElementById('finaleQ').textContent = CONFIG.finalQuestion;
+const noBtn=document.getElementById('noBtn');
+const yesBtn=document.getElementById('yesBtn');
+let dodges=0;
+function dodge(){
+  dodges++;
+  const maxX=Math.min(140, window.innerWidth*0.28);
+  const x=(Math.random()*2-1)*maxX;
+  const y=(Math.random()*2-1)*70;
+  noBtn.style.transform=`translate(${x}px,${y}px)`;
+  // reward persistence: yes grows, no shrinks & softens
+  const g=1+Math.min(dodges*0.12,0.8);
+  yesBtn.style.transform=`scale(${g})`;
+  noBtn.style.opacity=Math.max(1-dodges*0.12,0.35);
+  if(dodges===3) noBtn.textContent="No (really?)";
+  if(dodges===5) noBtn.textContent="are you sure…";
+  if(dodges>=7) noBtn.textContent="ok last chance";
+}
+noBtn.addEventListener('mouseenter',dodge);
+noBtn.addEventListener('click',(e)=>{e.preventDefault();dodge();});
+noBtn.addEventListener('touchstart',(e)=>{e.preventDefault();dodge();},{passive:false});
+
+// ---- YES celebration ----
+const ICO={
+  clock:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  pin:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-5.5 7-12a7 7 0 10-14 0c0 6.5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/></svg>',
+  shirt:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3l4 3 4-3 5 4-3 3-1-1v9H7v-9L6 10 3 7z"/></svg>',
+  note:'<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16v11l-4 4H4z"/><path d="M16 20v-4h4"/></svg>'
+};
+function saidYes(){
+  const rows=[
+    ['When',CONFIG.date.when,ICO.clock],
+    ['Where',CONFIG.date.where,ICO.pin],
+    ['Dress',CONFIG.date.dress,ICO.shirt],
+    ['P.S.',CONFIG.date.note,ICO.note]
+  ].filter(r=>r[1] && r[1].trim());
+  document.getElementById('detailsBox').innerHTML = rows.map(r=>`
+    <div class="detail-row">
+      <div class="detail-ico">${r[2]}</div>
+      <div><div class="k">${r[0]}</div><div class="v">${r[1]}</div></div>
+    </div>`).join('');
+  document.getElementById('signoff').textContent =
+    (CONFIG.signoff||"") + (CONFIG.yourName||"");
+  go('s-yes');
+  celebrate();
+}
+
+/* ---------- confetti + little bursts ---------- */
+const canvas=document.getElementById('confetti'), ctx=canvas.getContext('2d');
+let parts=[];
+function size(){canvas.width=innerWidth;canvas.height=innerHeight;}
+size(); addEventListener('resize',size);
+const COLORS=['#EC4899','#F59E0B','#8B5CF6','#F472B6','#FBBF24','#fff'];
+const reduce=matchMedia('(prefers-reduced-motion:reduce)').matches;
+function celebrate(){
+  if(reduce) return;
+  for(let i=0;i<160;i++){
+    parts.push({x:innerWidth/2,y:innerHeight*0.35,
+      vx:(Math.random()*2-1)*7, vy:Math.random()*-9-3,
+      g:0.18+Math.random()*0.1, s:6+Math.random()*7,
+      c:COLORS[i%COLORS.length], r:Math.random()*6, vr:(Math.random()*2-1)*0.3, life:1});
+  }
+  if(!raf) loop();
+}
+function burst(el){
+  if(reduce) return;
+  const rect=el.getBoundingClientRect();
+  const cx=rect.left+rect.width/2, cy=rect.top+rect.height/2;
+  for(let i=0;i<16;i++){
+    parts.push({x:cx,y:cy,vx:(Math.random()*2-1)*4,vy:(Math.random()*2-1)*4-2,
+      g:0.15,s:4+Math.random()*4,c:COLORS[i%COLORS.length],r:0,vr:0.2,life:1});
+  }
+  if(!raf) loop();
+}
+let raf=null;
+function loop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  parts.forEach(p=>{
+    p.vy+=p.g; p.x+=p.vx; p.y+=p.vy; p.r+=p.vr; p.life-=0.008;
+    ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.r); ctx.globalAlpha=Math.max(p.life,0);
+    ctx.fillStyle=p.c; ctx.fillRect(-p.s/2,-p.s/2,p.s,p.s*0.6); ctx.restore();
+  });
+  parts=parts.filter(p=>p.life>0 && p.y<canvas.height+40);
+  if(parts.length){raf=requestAnimationFrame(loop);}else{raf=null;ctx.clearRect(0,0,canvas.width,canvas.height);}
+}
+
+/* ---------- floating hearts backdrop ---------- */
+(function(){
+  if(reduce) return;
+  const box=document.getElementById('hearts');
+  const colors=['#F9A8D4','#FBCFE8','#F472B6','#DDD6FE'];
+  for(let i=0;i<14;i++){
+    const s=14+Math.random()*26;
+    const h=document.createElement('div'); h.className='float-heart';
+    h.style.left=Math.random()*100+'vw';
+    h.style.animationDuration=(9+Math.random()*10)+'s';
+    h.style.animationDelay=(-Math.random()*12)+'s';
+    h.innerHTML=`<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="${colors[i%colors.length]}"><path d="M12 21s-7.5-4.9-10.2-9.2C-0.2 8 1.6 4 5.2 4c2 0 3.4 1.2 4.3 2.5C10.4 5.2 11.8 4 13.8 4c3.6 0 5.4 4 3.4 7.8C19.5 16.1 12 21 12 21z"/></svg>`;
+    box.appendChild(h);
+  }
+})();
+</script>
+</body>
+</html>
