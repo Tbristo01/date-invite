@@ -137,6 +137,27 @@ h1{font-family:'Cormorant Infant',serif;font-weight:700;font-size:clamp(23px,5.6
 .tile:focus-visible{outline:3px solid var(--ring);outline-offset:3px}
 .tile.used{opacity:.25;pointer-events:none;transform:scale(.9)}
 
+/* photo puzzle */
+.photo-wrap{display:flex;justify-content:center;margin-top:22px}
+.photo-grid{
+  width:min(300px,80vw);aspect-ratio:3/4;
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+  gap:4px;padding:8px;border-radius:22px;background:#fff;box-shadow:var(--clay);
+}
+.ptile{
+  border:none;border-radius:8px;cursor:pointer;padding:0;
+  background-image:var(--photo);background-size:300% 300%;background-repeat:no-repeat;
+  transition:transform .18s, box-shadow .18s, outline-color .18s;outline:3px solid transparent;outline-offset:-3px;
+  -webkit-tap-highlight-color:transparent;touch-action:manipulation;
+}
+.ptile:hover{transform:scale(.97)}
+.ptile.sel{outline-color:var(--gold);box-shadow:0 0 0 3px rgba(245,158,11,.4);transform:scale(.95);z-index:2}
+.ptile:focus-visible{outline-color:var(--ring)}
+.photo-grid.solved{gap:0}
+.photo-grid.solved .ptile{border-radius:0;pointer-events:none;animation:solvePulse .5s}
+.photo-grid.solved{animation:solvePulse .6s}
+@keyframes solvePulse{0%{transform:scale(1)}50%{transform:scale(1.04)}100%{transform:scale(1)}}
+
 /* finale */
 .finale-q{font-family:'Great Vibes',cursive;color:var(--pink-deep);font-size:clamp(34px,9vw,56px);line-height:1.05;margin:6px 0 4px}
 .answers{position:relative;display:flex;gap:16px;justify-content:center;align-items:center;margin-top:26px;min-height:70px;flex-wrap:wrap}
@@ -177,7 +198,7 @@ h1{font-family:'Cormorant Infant',serif;font-weight:700;font-size:clamp(23px,5.6
     <div class="card">
       <div class="kicker" id="greeting">Hi you…</div>
       <h1>I made you a little game 🤍</h1>
-      <p class="lead" id="introText">A few silly questions, one secret word, and a question I've been dying to ask you. Pass the quiz to unlock it. 😏</p>
+      <p class="lead" id="introText">A few silly questions, a secret word, one photo to piece back together — and a question I've been dying to ask you. 😏</p>
       <div style="margin-top:26px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
         <button class="btn big" id="startBtn">Start the quiz</button>
       </div>
@@ -208,6 +229,23 @@ h1{font-family:'Cormorant Infant',serif;font-weight:700;font-size:clamp(23px,5.6
       <div class="tiles" id="tiles"></div>
       <div style="margin-top:12px"><button class="btn ghost" style="font-size:14px;padding:10px 18px;min-height:auto" id="clearBtn">clear</button></div>
       <button class="skip" id="skipWord">skip this →</button>
+    </div>
+  </section>
+
+  <!-- PHOTO PUZZLE -->
+  <section class="stage" id="s-photo" aria-label="Photo puzzle">
+    <div class="card">
+      <div class="label">Last one 📸</div>
+      <h1>Put us back together</h1>
+      <p class="lead">Tap two tiles to swap them. Rebuild the photo to unlock the question.</p>
+      <div class="photo-wrap">
+        <div class="photo-grid" id="photoGrid" aria-label="photo puzzle"></div>
+      </div>
+      <div style="margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn ghost" style="font-size:14px;padding:10px 18px;min-height:auto" id="peekBtn">peek 👀</button>
+        <button class="btn ghost" style="font-size:14px;padding:10px 18px;min-height:auto" id="shuffleBtn">shuffle</button>
+      </div>
+      <button class="skip" id="skipPhoto">skip this →</button>
     </div>
   </section>
 
@@ -286,6 +324,9 @@ const CONFIG = {
     }
   ],
 
+  // ---- Photo puzzle image (sits next to this HTML file). Any portrait/landscape photo works.
+  photo: "photo.jpg",
+
   // ---- Secret word she unscrambles (her name is a fun one!)
   secretWord: "JOVIE",
   scrambleHint: "Tap the letters in order. Five letters. Hint: it's my favorite name in the world. 😊",
@@ -320,6 +361,7 @@ function go(id){
   current = id;
   window.scrollTo({top:0,behavior:'smooth'});
   if(id==='s-word') buildScramble();
+  if(id==='s-photo') buildPhoto();
 }
 
 /* ---------- QUIZ ---------- */
@@ -413,12 +455,64 @@ function checkScramble(){
   const guess=scrambleState.map(s=>s.ch).join('');
   if(guess===word){
     document.querySelectorAll('#slots .slot').forEach((s,i)=>setTimeout(()=>burst(s),i*70));
-    setTimeout(()=>go('s-finale'),820);
+    setTimeout(()=>go('s-photo'),820);
   }else{
     document.getElementById('slots').style.animation='shake .4s';
     setTimeout(()=>{document.getElementById('slots').style.animation='';resetScramble();},420);
   }
 }
+
+/* ---------- PHOTO PUZZLE (3x3 tap-to-swap) ---------- */
+const N=3;
+let order=[], sel=null, peeking=false;
+const grid=document.getElementById('photoGrid');
+grid.style.setProperty('--photo', `url("${CONFIG.photo}")`);
+function bgPos(correctIdx){
+  const r=Math.floor(correctIdx/N), c=correctIdx%N;
+  return `${(c/(N-1))*100}% ${(r/(N-1))*100}%`;
+}
+function renderPhoto(){
+  grid.innerHTML='';
+  order.forEach((tileId,pos)=>{
+    const b=document.createElement('button');
+    b.className='ptile'; b.type='button';
+    b.style.backgroundPosition=bgPos(tileId);
+    b.setAttribute('aria-label',`tile ${pos+1}`);
+    b.onclick=()=>tapTile(pos,b);
+    grid.appendChild(b);
+  });
+}
+function tapTile(pos,el){
+  if(grid.classList.contains('solved')) return;
+  if(sel===null){ sel=pos; el.classList.add('sel'); return; }
+  if(sel===pos){ sel=null; el.classList.remove('sel'); return; }
+  [order[sel],order[pos]]=[order[pos],order[sel]];
+  sel=null; renderPhoto(); checkPhoto();
+}
+function isSolved(){ return order.every((t,i)=>t===i); }
+function shufflePhoto(){
+  do{ order=shuffle([...Array(N*N).keys()]); }while(isSolved());
+  sel=null; renderPhoto();
+}
+function buildPhoto(){
+  grid.classList.remove('solved');
+  shufflePhoto();
+}
+function checkPhoto(){
+  if(isSolved()){
+    grid.classList.add('solved');
+    burst(grid);
+    setTimeout(()=>go('s-finale'),1000);
+  }
+}
+document.getElementById('shuffleBtn').onclick=()=>{ if(!grid.classList.contains('solved')) shufflePhoto(); };
+document.getElementById('peekBtn').addEventListener('pointerdown',()=>{
+  if(grid.classList.contains('solved'))return;
+  const saved=order.slice(); order=[...Array(N*N).keys()]; renderPhoto();
+  const restore=()=>{ order=saved; renderPhoto();
+    document.removeEventListener('pointerup',restore); document.removeEventListener('pointercancel',restore); };
+  document.addEventListener('pointerup',restore); document.addEventListener('pointercancel',restore);
+});
 
 /* ---------- FINALE ---------- */
 document.getElementById('finaleQ').textContent = CONFIG.finalQuestion;
@@ -471,7 +565,8 @@ function saidYes(){
 document.getElementById('startBtn').onclick=()=>{ go('s-quiz'); buildDots(); qi=0; renderQuestion(); };
 document.getElementById('skipIntro').onclick=()=>go('s-finale');
 document.getElementById('skipQuiz').onclick=()=>go('s-word');
-document.getElementById('skipWord').onclick=()=>go('s-finale');
+document.getElementById('skipWord').onclick=()=>go('s-photo');
+document.getElementById('skipPhoto').onclick=()=>go('s-finale');
 document.getElementById('clearBtn').onclick=resetScramble;
 yesBtn.addEventListener('click',saidYes);
 
